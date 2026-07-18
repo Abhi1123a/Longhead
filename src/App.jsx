@@ -49,20 +49,12 @@ const FONTS = `
 /* ---------------------------------------------------------------------- */
 /*  Mock data                                                               */
 /* ---------------------------------------------------------------------- */
-const MOCK_USERS = {
-  linkedin: {
-    name: "Jordan Avery",
-    headline: "Product Engineer @ Northwind Labs",
-    initials: "JA",
-    ring: "#0A66C2",
-  },
-  google: {
-    name: "Priya Chandrasekaran",
-    headline: "Senior Data Scientist @ Fieldstone",
-    initials: "PC",
-    ring: "#EA4335",
-  },
-};
+function initialsFrom(name) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 const TONES = [
   { id: "professional", label: "Professional / Corporate" },
@@ -152,17 +144,6 @@ Happy to go deeper on architecture decisions in the comments if useful.
 /* ---------------------------------------------------------------------- */
 /*  Small building blocks                                                   */
 /* ---------------------------------------------------------------------- */
-function GoogleMark({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true">
-      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
-      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.95v2.33A9 9 0 0 0 9 18z" />
-      <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.95A9 9 0 0 0 0 9c0 1.45.35 2.83.95 4.05z" />
-      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .95 4.95l3.02 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
-    </svg>
-  );
-}
-
 function StepBadge({ n }) {
   return (
     <span
@@ -261,17 +242,10 @@ function Landing({ onSignIn }) {
               <Linkedin size={18} />
               Sign in with LinkedIn
             </button>
-            <button
-              onClick={() => onSignIn("google")}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-sm font-medium border transition-transform hover:-translate-y-0.5"
-              style={{ background: COLOR.white, color: COLOR.ink, borderColor: COLOR.borderStrong, fontFamily: "'Inter', sans-serif" }}
-            >
-              <GoogleMark />
-              Sign in with Google
-            </button>
           </div>
           <p className="text-xs mt-4" style={{ color: COLOR.inkFaint, fontFamily: "'Inter', sans-serif" }}>
             Prototype sign-in — no account is created, nothing leaves your browser.
+            You'll fill in your own name and headline for the preview.
           </p>
         </div>
 
@@ -315,13 +289,13 @@ function Landing({ onSignIn }) {
             style={{ background: COLOR.white, borderColor: COLOR.border }}
           >
             <div className="flex items-center gap-3 mb-3">
-              <Avatar initials="JA" ring="#0A66C2" size={36} />
+              <Avatar initials="?" ring="#0A66C2" size={36} />
               <div>
                 <div className="text-sm font-semibold" style={{ color: COLOR.ink, fontFamily: "'Inter', sans-serif" }}>
-                  Jordan Avery
+                  Your name
                 </div>
                 <div className="text-xs" style={{ color: COLOR.inkFaint, fontFamily: "'Inter', sans-serif" }}>
-                  Product Engineer · Now
+                  Your headline · Now
                 </div>
               </div>
             </div>
@@ -544,8 +518,18 @@ function PostPreview({ user, tone, setTone, text, setText }) {
 /* ---------------------------------------------------------------------- */
 /*  Dashboard (authenticated app)                                           */
 /* ---------------------------------------------------------------------- */
-function Dashboard({ provider, onSignOut }) {
-  const user = MOCK_USERS[provider];
+function Dashboard({ onSignOut }) {
+  // Nothing here is persisted anywhere — this is plain component state.
+  // Refresh the page and it's gone; it never touches localStorage, a
+  // cookie, or a server.
+  const [name, setName] = useState("");
+  const [headline, setHeadline] = useState("");
+  const user = {
+    name: name || "Your Name",
+    headline: headline || "Your headline",
+    initials: initialsFrom(name) || "—",
+    ring: "#0A66C2",
+  };
 
   const [fileName, setFileName] = useState("");
   const [fileText, setFileText] = useState("");
@@ -632,12 +616,20 @@ function Dashboard({ provider, onSignOut }) {
           <div className="flex items-center gap-2.5">
             <Avatar initials={user.initials} ring={user.ring} size={34} />
             <div className="hidden sm:block">
-              <div className="text-xs font-semibold leading-tight" style={{ color: COLOR.ink, fontFamily: "'Inter', sans-serif" }}>
-                {user.name}
-              </div>
-              <div className="text-xs leading-tight" style={{ color: COLOR.inkFaint, fontFamily: "'Inter', sans-serif" }}>
-                {user.headline}
-              </div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="text-xs font-semibold leading-tight outline-none block w-36"
+                style={{ color: COLOR.ink, fontFamily: "'Inter', sans-serif", background: "transparent" }}
+              />
+              <input
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="Your headline"
+                className="text-xs leading-tight outline-none block w-36"
+                style={{ color: COLOR.inkFaint, fontFamily: "'Inter', sans-serif", background: "transparent" }}
+              />
             </div>
           </div>
           <button
@@ -651,6 +643,16 @@ function Dashboard({ provider, onSignOut }) {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 md:px-10 pb-16">
+        {!name && (
+          <div
+            className="flex items-center gap-2 rounded-lg px-4 py-2.5 mb-8 text-xs"
+            style={{ background: COLOR.accentSoft, color: COLOR.accentDeep, fontFamily: "'Inter', sans-serif" }}
+          >
+            👋 Add your name and headline up top — that's what shows on the post preview.
+            It's only kept in this browser tab and is never saved or sent anywhere.
+          </div>
+        )}
+
         {/* Step 1 */}
         <section className="mb-10">
           <div className="flex items-center gap-3 mb-4">
@@ -780,11 +782,11 @@ function Dashboard({ provider, onSignOut }) {
 /*  Root app                                                                */
 /* ---------------------------------------------------------------------- */
 export default function App() {
-  const [provider, setProvider] = useState(null); // null | 'linkedin' | 'google'
+  const [signedIn, setSignedIn] = useState(false);
 
-  if (!provider) {
-    return <Landing onSignIn={setProvider} />;
+  if (!signedIn) {
+    return <Landing onSignIn={() => setSignedIn(true)} />;
   }
 
-  return <Dashboard provider={provider} onSignOut={() => setProvider(null)} />;
+  return <Dashboard onSignOut={() => setSignedIn(false)} />;
 }
